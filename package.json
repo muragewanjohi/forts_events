@@ -1,0 +1,42 @@
+{
+  "name": "events-pos",
+  "version": "1.0.0",
+  "description": "Offline-first POS system for event management",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "init-db": "node server/database/init.js",
+    "migrate": "node server/database/migration_add_payment_status.js",
+    "migrate-tables": "node server/database/migration_add_tables.js",
+    "migrate-categories": "node server/database/migration_add_categories.js",
+    "migrate-locations": "node server/database/migration_add_locations.js",
+    "migrate-order-status": "node server/database/migration_update_order_status.js",
+    "migrate-payment-method": "node server/database/migration_update_payment_method.js",
+    "migrate-mpesa-reference": "node server/database/migration_add_mpesa_reference.js"
+  },
+  "keywords": [
+    "pos",
+    "events",
+    "offline",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.6.1",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
