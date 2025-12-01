@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const socketIo = require('socket.io');
 require('dotenv').config();
@@ -36,6 +37,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from client (when frontend is built)
+const clientDistPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+}
 app.use(express.static(path.join(__dirname, '../client/public')));
 
 // API Routes
@@ -52,6 +57,19 @@ app.use('/api/locations', locationRoutes);
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve index.html for all non-API routes (SPA routing)
+// This must be after all API routes
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    const indexPath = path.join(__dirname, '../client/dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('Frontend not built. Please run: cd client && npm run build');
+    }
+  }
 });
 
 // Socket.io for real-time updates

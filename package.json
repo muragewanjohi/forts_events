@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
+    "launch": "node launcher.js",
+    "build": "cd client && npm run build",
+    "build:all": "npm install && cd client && npm install && npm run build",
     "init-db": "node server/database/init.js",
     "migrate": "node server/database/migration_add_payment_status.js",
     "migrate-tables": "node server/database/migration_add_tables.js",
@@ -13,7 +16,8 @@
     "migrate-locations": "node server/database/migration_add_locations.js",
     "migrate-order-status": "node server/database/migration_update_order_status.js",
     "migrate-payment-method": "node server/database/migration_update_payment_method.js",
-    "migrate-mpesa-reference": "node server/database/migration_add_mpesa_reference.js"
+    "migrate-mpesa-reference": "node server/database/migration_add_mpesa_reference.js",
+    "package": "node scripts/package.js"
   },
   "keywords": [
     "pos",

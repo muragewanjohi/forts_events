@@ -31,6 +31,12 @@ dist/
 build/
 client/build/
 
+# Packaging
+package/
+portable/
+installer/
+nodejs/
+
 # Temporary files
 *.tmp
 *.temp
