@@ -17,6 +17,7 @@
     "migrate-order-status": "node server/database/migration_update_order_status.js",
     "migrate-payment-method": "node server/database/migration_update_payment_method.js",
     "migrate-mpesa-reference": "node server/database/migration_add_mpesa_reference.js",
+    "migrate-fix-transfers": "node server/database/migration_fix_transfers_schema.js",
     "package": "node scripts/package.js"
   },
   "keywords": [

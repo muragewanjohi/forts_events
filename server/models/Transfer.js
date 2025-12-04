@@ -30,8 +30,10 @@ class Transfer {
     }
 
     // Map source location to stock field
-    const sourceName = fromLocation.name.toLowerCase();
+    const sourceName = fromLocation.name.toLowerCase().trim();
     let stockField = 'stock_main_store'; // default
+    
+    // More robust location name matching
     if (sourceName.includes('main') || sourceName.includes('store')) {
       stockField = 'stock_main_store';
     } else if (sourceName.includes('bar')) {
@@ -40,9 +42,14 @@ class Transfer {
       stockField = 'stock_counter';
     }
     
-    const availableStock = item[stockField] || 0;
+    // Ensure the stock field exists on the item
+    if (!item.hasOwnProperty(stockField)) {
+      throw new Error(`Item does not have stock field: ${stockField}. Available fields: ${Object.keys(item).join(', ')}`);
+    }
+    
+    const availableStock = Number(item[stockField]) || 0;
     if (availableStock < quantity) {
-      throw new Error(`Insufficient stock in ${fromLocation.name}. Available: ${availableStock}`);
+      throw new Error(`Insufficient stock in ${fromLocation.name}. Available: ${availableStock}, Requested: ${quantity}`);
     }
 
     // Create transfer

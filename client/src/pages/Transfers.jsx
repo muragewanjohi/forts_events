@@ -20,6 +20,18 @@ export default function Transfers() {
     loadData();
   }, []);
 
+  const getStockForLocation = (item, locationName) => {
+    const name = locationName?.toLowerCase() || '';
+    if (name.includes('main') || name.includes('store')) {
+      return item.stock_main_store || 0;
+    } else if (name.includes('bar')) {
+      return item.stock_bar || 0;
+    } else if (name.includes('counter')) {
+      return item.stock_counter || 0;
+    }
+    return item.stock_main_store || 0; // default
+  };
+
   const loadData = async () => {
     try {
       const [transfersRes, itemsRes, sourcesRes, destinationsRes] = await Promise.all([
@@ -29,7 +41,7 @@ export default function Transfers() {
         api.get('/locations/destinations')
       ]);
       setTransfers(transfersRes.data);
-      setItems(itemsRes.data.filter(item => item.stock_main_store > 0));
+      setItems(itemsRes.data); // Don't filter here - filter in the dropdown based on selected location
       setSourceLocations(sourcesRes.data);
       setDestinationLocations(destinationsRes.data);
       
@@ -55,6 +67,14 @@ export default function Transfers() {
         alert('Please select both source and destination locations');
         return;
       }
+      if (!formData.item_id) {
+        alert('Please select an item');
+        return;
+      }
+      if (!formData.quantity || formData.quantity <= 0) {
+        alert('Please enter a valid quantity');
+        return;
+      }
       await api.post('/transfers', {
         from_location_id: parseInt(formData.from_location_id),
         to_location_id: parseInt(formData.to_location_id),
@@ -64,7 +84,9 @@ export default function Transfers() {
       resetForm();
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || error.response?.data?.message || 'Error creating transfer');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error creating transfer';
+      console.error('Transfer error:', error);
+      alert(errorMessage);
     }
   };
 
@@ -128,11 +150,22 @@ export default function Transfers() {
                   required
                 >
                   <option value="">Select item</option>
-                  {items.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} (Stock: {item.stock_main_store})
-                    </option>
-                  ))}
+                  {items
+                    .filter(item => {
+                      if (!formData.from_location_id) return true;
+                      const sourceLocation = sourceLocations.find(l => l.id === parseInt(formData.from_location_id));
+                      const stock = getStockForLocation(item, sourceLocation?.name);
+                      return stock > 0;
+                    })
+                    .map(item => {
+                      const sourceLocation = sourceLocations.find(l => l.id === parseInt(formData.from_location_id));
+                      const stock = getStockForLocation(item, sourceLocation?.name);
+                      return (
+                        <option key={item.id} value={item.id}>
+                          {item.name} (Stock: {stock})
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
               <div className="form-group">
