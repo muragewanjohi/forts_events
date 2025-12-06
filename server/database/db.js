@@ -52,20 +52,56 @@ db.promisify = {
   }
 };
 
-// Initialize database schema
-function initDatabase() {
+// Initialize database schema and create default admin user
+async function initDatabase() {
   return new Promise((resolve, reject) => {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    db.exec(schema, (err) => {
+    db.exec(schema, async (err) => {
       if (err) {
         console.error('Error initializing database:', err.message);
         reject(err);
-      } else {
-        console.log('Database schema initialized');
-        resolve();
+        return;
       }
+      
+      console.log('Database schema initialized');
+      
+      // Create default admin user if it doesn't exist
+      try {
+        const adminExists = await db.promisify.get(
+          'SELECT id FROM users WHERE username = ?',
+          ['admin']
+        );
+        
+        if (!adminExists) {
+          const bcrypt = require('bcryptjs');
+          const passwordHash = await bcrypt.hash('admin123', 10);
+          await db.promisify.run(
+            `INSERT INTO users (username, full_name, password_hash, role)
+             VALUES (?, ?, ?, ?)`,
+            ['admin', 'Administrator', passwordHash, 'admin']
+          );
+          console.log('Default admin user created:');
+          console.log('  Username: admin');
+          console.log('  Password: admin123');
+          console.log('  ⚠️  Please change the password after first login!');
+        } else {
+          console.log('Admin user already exists');
+        }
+      } catch (userError) {
+        console.error('Error creating admin user:', userError);
+        // Don't reject - schema is initialized, admin user creation can be done manually
+      }
+      
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(__dirname, '../../uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('Created uploads directory');
+      }
+      
+      resolve();
     });
   });
 }

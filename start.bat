@@ -64,7 +64,7 @@ if not exist "client\node_modules" (
 )
 
 REM Check if database exists, if not initialize it
-if not exist "server\database\events.db" (
+if not exist "server\database\events_pos.db" (
     echo Initializing database...
     call npm run init-db
     if %ERRORLEVEL% NEQ 0 (
