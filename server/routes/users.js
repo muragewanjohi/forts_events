@@ -83,13 +83,17 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const updateData = {};
     if (full_name !== undefined) updateData.full_name = full_name;
-    if (password !== undefined) updateData.password = password;
+    // Only include password if it's provided and not empty
+    if (password !== undefined && password !== null && password.trim() !== '') {
+      updateData.password = password;
+    }
     if (role !== undefined) updateData.role = role;
     if (is_active !== undefined) updateData.is_active = is_active;
 
     const user = await User.update(id, updateData);
     res.json(user);
   } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({ error: 'Error updating user', message: error.message });
   }
 });

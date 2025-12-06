@@ -73,7 +73,8 @@ router.post('/', authenticate, requireRole('admin'), async (req, res) => {
 
     res.status(201).json(item);
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint')) {
+    console.error('Error creating item:', error);
+    if (error.code === 'SQLITE_CONSTRAINT' && error.message.includes('sku')) {
       return res.status(400).json({ error: 'SKU already exists' });
     }
     res.status(500).json({ error: 'Error creating item', message: error.message });
@@ -98,6 +99,10 @@ router.put('/:id', authenticate, requireRole('admin'), async (req, res) => {
     const item = await Item.update(id, updateData);
     res.json(item);
   } catch (error) {
+    console.error('Error updating item:', error);
+    if (error.code === 'SQLITE_CONSTRAINT' && error.message.includes('sku')) {
+      return res.status(400).json({ error: 'SKU already exists' });
+    }
     res.status(500).json({ error: 'Error updating item', message: error.message });
   }
 });

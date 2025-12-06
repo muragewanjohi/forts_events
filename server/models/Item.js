@@ -1,11 +1,82 @@
 const { db } = require('../database/db');
 
 class Item {
+  // Generate SKU from item name
+  static generateSKU(name) {
+    if (!name || name.trim() === '') {
+      return null;
+    }
+    
+    // Convert to uppercase, remove special characters, keep only alphanumeric and spaces
+    let sku = name.toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '') // Remove spaces
+      .trim();
+    
+    // Limit to 20 characters for readability
+    if (sku.length > 20) {
+      sku = sku.substring(0, 20);
+    }
+    
+    return sku || null;
+  }
+
+  // Generate unique SKU by checking if it exists and appending number if needed
+  static async generateUniqueSKU(baseSKU) {
+    if (!baseSKU) {
+      return null;
+    }
+
+    let sku = baseSKU;
+    let counter = 1;
+    let exists = true;
+
+    while (exists) {
+      const existing = await db.promisify.get(
+        'SELECT id FROM items WHERE sku = ?',
+        [sku]
+      );
+
+      if (!existing) {
+        exists = false;
+      } else {
+        // Append number to make it unique
+        const base = baseSKU.length > 15 ? baseSKU.substring(0, 15) : baseSKU;
+        sku = `${base}${counter}`;
+        counter++;
+        
+        // Prevent infinite loop (max 9999)
+        if (counter > 9999) {
+          // Use timestamp as fallback
+          sku = `${baseSKU}${Date.now().toString().slice(-4)}`;
+          break;
+        }
+      }
+    }
+
+    return sku;
+  }
+
   static async create({ name, sku, cost_per_item, category_id, stock_main_store = 0 }) {
+    let skuValue;
+    
+    if (sku && sku.trim() !== '') {
+      // User provided SKU, use it (trimmed)
+      skuValue = sku.trim();
+    } else {
+      // Auto-generate SKU from name
+      const generatedSKU = this.generateSKU(name);
+      if (generatedSKU) {
+        skuValue = await this.generateUniqueSKU(generatedSKU);
+      } else {
+        skuValue = null;
+      }
+    }
+    
     const result = await db.promisify.run(
       `INSERT INTO items (name, sku, cost_per_item, category_id, stock_main_store)
        VALUES (?, ?, ?, ?, ?)`,
-      [name, sku, cost_per_item, category_id || null, stock_main_store]
+      [name, skuValue, cost_per_item, category_id || null, stock_main_store]
     );
     return this.findById(result.lastID);
   }
@@ -49,8 +120,15 @@ class Item {
 
     Object.keys(data).forEach(key => {
       if (data[key] !== undefined) {
-        updates.push(`${key} = ?`);
-        params.push(data[key]);
+        // Convert empty SKU to NULL
+        if (key === 'sku') {
+          const skuValue = (data[key] && data[key].trim() !== '') ? data[key].trim() : null;
+          updates.push(`${key} = ?`);
+          params.push(skuValue);
+        } else {
+          updates.push(`${key} = ?`);
+          params.push(data[key]);
+        }
       }
     });
 

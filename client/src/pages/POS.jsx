@@ -287,7 +287,12 @@ export default function POS() {
         navigate('/orders');
       }, 500);
     } catch (error) {
-      alert(error.response?.data?.error || 'Error placing order');
+      console.error('Error placing order:', error);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Error placing order';
+      alert(errorMessage);
     }
   };
 

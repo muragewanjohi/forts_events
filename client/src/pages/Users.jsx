@@ -32,15 +32,26 @@ export default function Users() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Prepare data - don't send password if it's empty when editing
+      const submitData = { ...formData };
+      if (editingUser && (!submitData.password || submitData.password.trim() === '')) {
+        delete submitData.password;
+      }
+      
       if (editingUser) {
-        await api.put(`/users/${editingUser.id}`, formData);
+        await api.put(`/users/${editingUser.id}`, submitData);
       } else {
-        await api.post('/users', formData);
+        await api.post('/users', submitData);
       }
       resetForm();
       loadUsers();
     } catch (error) {
-      alert(error.response?.data?.error || 'Error saving user');
+      console.error('Error saving user:', error);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Error saving user';
+      alert(errorMessage);
     }
   };
 

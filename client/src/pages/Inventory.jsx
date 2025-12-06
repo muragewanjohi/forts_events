@@ -2,6 +2,26 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './Inventory.css';
 
+// Generate SKU from item name (matches server logic)
+function generateSKUFromName(name) {
+  if (!name || name.trim() === '') {
+    return '';
+  }
+  
+  // Convert to uppercase, remove special characters, keep only alphanumeric and spaces
+  let sku = name.toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '') // Remove spaces
+    .trim();
+  
+  // Limit to 20 characters for readability
+  if (sku.length > 20) {
+    sku = sku.substring(0, 20);
+  }
+  
+  return sku;
+}
+
 export default function Inventory() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -11,6 +31,7 @@ export default function Inventory() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -47,7 +68,7 @@ export default function Inventory() {
         await api.post('/inventory', formData);
       }
       resetForm();
-      loadItems();
+      loadData();
     } catch (error) {
       alert(error.response?.data?.error || 'Error saving item');
     }
@@ -55,6 +76,7 @@ export default function Inventory() {
 
   const handleEdit = (item) => {
     setEditingItem(item);
+    setSkuManuallyEdited(true); // When editing, SKU is already set
     setFormData({
       name: item.name,
       sku: item.sku || '',
@@ -68,6 +90,7 @@ export default function Inventory() {
   const resetForm = () => {
     setFormData({ name: '', sku: '', cost_per_item: '', category_id: '', stock_main_store: 0 });
     setEditingItem(null);
+    setSkuManuallyEdited(false); // Reset flag when form is closed
     setShowForm(false);
   };
 
@@ -151,16 +174,29 @@ export default function Inventory() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    // Auto-generate SKU from name if SKU is empty, not editing, and user hasn't manually edited SKU
+                    if (!editingItem && !skuManuallyEdited && (!formData.sku || formData.sku.trim() === '')) {
+                      const generatedSKU = generateSKUFromName(newName);
+                      setFormData({ ...formData, name: newName, sku: generatedSKU });
+                    } else {
+                      setFormData({ ...formData, name: newName });
+                    }
+                  }}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>SKU</label>
+                <label>SKU {!editingItem && <small style={{ color: '#666', fontSize: '0.75rem' }}>(auto-generated, can be edited)</small>}</label>
                 <input
                   type="text"
                   value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, sku: e.target.value });
+                    setSkuManuallyEdited(true); // Mark as manually edited
+                  }}
+                  placeholder={editingItem ? "Leave empty to remove SKU" : "Will be generated from name"}
                 />
               </div>
               <div className="form-group">

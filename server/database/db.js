@@ -1,21 +1,64 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-const DB_PATH = path.join(__dirname, 'events_pos.db');
+// Determine database path - use user-writable location
+// Priority: 1) Environment variable, 2) AppData folder, 3) Application directory (fallback)
+function getDatabasePath() {
+  // Check if DB_PATH is set in environment
+  if (process.env.DB_PATH) {
+    return process.env.DB_PATH;
+  }
+  
+  // Use AppData for user-writable location (works even in Program Files installations)
+  const appDataPath = process.env.APPDATA || 
+                     (os.platform() === 'win32' ? path.join(os.homedir(), 'AppData', 'Roaming') : os.homedir());
+  
+  // Create Events POS directory in AppData
+  const dbDir = path.join(appDataPath, 'Events POS System');
+  
+  // Ensure directory exists
+  if (!fs.existsSync(dbDir)) {
+    try {
+      fs.mkdirSync(dbDir, { recursive: true });
+      console.log(`Created database directory: ${dbDir}`);
+    } catch (error) {
+      console.error(`Failed to create database directory: ${dbDir}`, error);
+      // Fallback to application directory
+      return path.join(__dirname, 'events_pos.db');
+    }
+  }
+  
+  return path.join(dbDir, 'events_pos.db');
+}
+
+const DB_PATH = getDatabasePath();
 
 // Ensure database directory exists
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (error) {
+    console.error(`Failed to create database directory: ${dbDir}`, error);
+    throw new Error(`Cannot create database directory: ${dbDir}. Please check permissions.`);
+  }
 }
 
-// Create database connection
-const db = new sqlite3.Database(DB_PATH, (err) => {
+console.log(`Database path: ${DB_PATH}`);
+
+// Create database connection with write permissions
+// Use OPEN_READWRITE | OPEN_CREATE flags to ensure write access
+const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
+    console.error('Database path:', DB_PATH);
+    console.error('Please ensure the directory has write permissions.');
+    throw err;
   } else {
     console.log('Connected to SQLite database');
+    console.log('Database location:', DB_PATH);
   }
 });
 
@@ -27,8 +70,14 @@ db.promisify = {
   run: (sql, params = []) => {
     return new Promise((resolve, reject) => {
       db.run(sql, params, function(err) {
-        if (err) reject(err);
-        else resolve({ lastID: this.lastID, changes: this.changes });
+        if (err) {
+          console.error('Database run error:', err);
+          console.error('SQL:', sql);
+          console.error('Params:', params);
+          reject(err);
+        } else {
+          resolve({ lastID: this.lastID, changes: this.changes });
+        }
       });
     });
   },
@@ -36,8 +85,14 @@ db.promisify = {
   get: (sql, params = []) => {
     return new Promise((resolve, reject) => {
       db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
+        if (err) {
+          console.error('Database get error:', err);
+          console.error('SQL:', sql);
+          console.error('Params:', params);
+          reject(err);
+        } else {
+          resolve(row);
+        }
       });
     });
   },
@@ -45,8 +100,14 @@ db.promisify = {
   all: (sql, params = []) => {
     return new Promise((resolve, reject) => {
       db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
+        if (err) {
+          console.error('Database all error:', err);
+          console.error('SQL:', sql);
+          console.error('Params:', params);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
       });
     });
   }

@@ -53,7 +53,8 @@ class User {
       params.push(full_name);
     }
 
-    if (password !== undefined) {
+    // Only update password if it's provided and not empty
+    if (password !== undefined && password !== null && password.trim() !== '') {
       const passwordHash = await bcrypt.hash(password, 10);
       updates.push('password_hash = ?');
       params.push(passwordHash);
